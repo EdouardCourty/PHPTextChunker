@@ -1,28 +1,25 @@
 {
-    "name": "ecourty/template-bundle",
-    "description": "A template bundle.",
+    "name": "ecourty/text-chunker",
+    "description": "A framework-agnostic PHP library for chunking text and files using pluggable strategies and post-processors.",
     "type": "library",
-    "keywords": [],
+    "keywords": ["text", "chunking", "nlp", "rag", "splitting"],
     "require": {
-        "php": ">=8.3",
-        "symfony/dependency-injection": "^7.0",
-        "symfony/config": "^7.0"
+        "php": ">=8.3"
     },
     "require-dev": {
         "phpunit/phpunit": "^12.0",
         "phpstan/phpstan": "^2.1",
-        "friendsofphp/php-cs-fixer": "^3.71",
-        "symfony/var-dumper": "^7.2"
+        "friendsofphp/php-cs-fixer": "^3.71"
     },
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Ecourty\\": "src/"
+            "Ecourty\\TextChunker\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Ecourty\\Tests\\": "tests/"
+            "Ecourty\\TextChunker\\Tests\\": "tests/"
         }
     },
     "authors": [
@@ -35,8 +32,6 @@
     "scripts": {
         "test": "phpunit tests",
         "test-unit": "phpunit tests/Unit/",
-        "test-functional": "phpunit tests/Functional/",
-        "test-integration": "phpunit tests/Integration/",
         "test-fast": "@test-unit",
         "phpstan": "phpstan analyse --memory-limit=-1",
         "cs-fix": "PHP_CS_FIXER_IGNORE_ENV=1 php-cs-fixer fix . --config .php-cs-fixer.php",

@@ -2,15 +2,19 @@
 
 ## 🎯 Core Concept
 
-[TO BE FILLED]
+**php-text-chunker** is a standalone PHP library for splitting text (from files or strings) into semantically meaningful chunks, using pluggable strategies and a composable post-processing pipeline.
 
 ### Problem Solved
 
-[TO BE FILLED]
+When building RAG (Retrieval-Augmented Generation) pipelines, vector search systems, or any NLP application, raw text must be split into smaller chunks before embedding or processing. Different content types (articles, dialogues, code, etc.) require different splitting strategies.
 
 ### Solution
 
-[TO BE FILLED]
+A strategy-based chunker with a streaming-first design:
+- Pluggable **chunking strategies** for different content types
+- A composable **post-processor pipeline** applied after chunking
+- Memory-efficient **Generator-based streaming** (no full file load)
+- Works with both **files** and **raw strings**
 
 ---
 
@@ -18,37 +22,91 @@
 
 ### Overview
 
-[TO BE FILLED]
+```
+TextChunker (entry point)
+  ├── setFile(path) / setText(string)
+  ├── withMetadata(array)
+  ├── withPostProcessor(ChunkPostProcessorInterface)
+  └── chunk(ChunkingStrategyInterface): Generator<Chunk>
+           │
+           ├── Strategy (splits data into Chunks)
+           └── PostProcessors (pipeline applied in order)
+```
 
 ### Main Components
 
-[TO BE FILLED]
+| Component | Location | Role |
+|---|---|---|
+| `TextChunker` | `src/TextChunker.php` | Entry point. Orchestrates chunking. |
+| `Chunk` | `src/ValueObject/Chunk.php` | Immutable value object: text + position + metadata |
+| `ChunkingStrategyInterface` | `src/Contract/` | Contract for splitting strategies |
+| `ChunkPostProcessorInterface` | `src/Contract/` | Contract for post-processors |
+| Strategies | `src/Strategy/` | 4 built-in splitting strategies |
+| Post-processors | `src/PostProcessor/` | 4 built-in post-processing transforms |
 
 ---
 
 ## 🚀 Typical Use Cases
 
-[TO BE FILLED]
+- Preparing document chunks for vector embedding (RAG pipelines)
+- Splitting large text files for batch NLP processing
+- Preprocessing dialogue transcripts into conversation segments
+- Enforcing token limits before sending text to LLM APIs
 
 ---
 
 ## 💡 Design Patterns Used
 
-[TO BE FILLED]
+- **Strategy Pattern** — Swap chunking logic at runtime
+- **Pipeline / Decorator** — Post-processors wrap Generators in sequence
+- **Generator Streaming** — Memory-efficient; never loads full file into memory
+- **Immutable Value Object** — `Chunk` is `readonly`; `withMetadata()` returns a new instance
+- **Fluent Interface** — `TextChunker` methods are chainable
 
 ---
 
 ## Project breakdown
 
-[TO BE FILLED]
+### Strategies (`src/Strategy/`)
+
+| Class | Splits on |
+|---|---|
+| `ParagraphChunkingStrategy` | Double newlines (`\n\n`) |
+| `SentenceChunkingStrategy` | Sentence-ending punctuation (`[.!?]`) |
+| `FixedSizeChunkingStrategy` | Fixed character count (configurable) |
+| `MarkdownChunkingStrategy` | Markdown headers (`#` to `######`) |
+| `WordCountChunkingStrategy` | Fixed word count |
+| `RegexChunkingStrategy` | Configurable regex pattern |
+| `LineChunkingStrategy` | N consecutive lines per chunk |
+| `RecursiveChunkingStrategy` | Cascade of strategies with a max chunk size |
+
+### Post-Processors (`src/PostProcessor/`)
+
+| Class | Purpose |
+|---|---|
+| `OverlappingChunkPostProcessor` | Prepends tail of previous chunk for context continuity |
+| `TokenLimitPostProcessor` | Splits oversized chunks to respect token budget |
+| `MetadataEnricherPostProcessor` | Adds word count, char count, index, total, source |
+| `ChunkFilterPostProcessor` | Removes empty or too-short chunks |
+| `ChunkMergerPostProcessor` | Merges consecutive small chunks up to a minimum size |
+| `TextNormalizationPostProcessor` | Cleans whitespace, control chars, trims lines |
+| `DeduplicationPostProcessor` | Removes duplicate chunks by content hash (md5) |
+| `RegexReplacePostProcessor` | Applies regex substitutions on each chunk's text |
 
 **IMPORTANT**: This section should evolve with the project. When a new feature is created, updated or removed, this section should too.
 
 ## 🧪 Testing
 
-This bundle should be covered by unit, integration and functional tests.
-The tests are located in the `tests/{Unit|Integration|Functional}` folder.
-Unit tests can use mocks or stubs if needed.
+Tests are located in `tests/Unit/`. Each strategy and post-processor has its own test class.
+
+```
+tests/Unit/
+├── TextChunkerTest.php
+├── Strategy/
+└── PostProcessor/
+```
+
+Run tests: `composer test`
 
 ---
 
@@ -57,47 +115,28 @@ Unit tests can use mocks or stubs if needed.
 ### General
 
 - NEVER commit or push the git repository.
-- When unsure about something, you MUST ask the user for clarification. Same goes it the user request is unclear.
-- When facing a problem that has an easy "hacky" solution, and a more robust but more difficult to implement one, always choose the robust one:
-  - Easy hacky fixes become technical debt, and can lead to issues down the road
-  - Robust solutions means the project will remain serious and well-built.
-- ALWAYS write tests for the important components. Better safe than sorry!
-- Do NOT write ANY type documentation unless explicitly asked.
-- Once a feature is complete, update the @README.md and @AGENTS.md accordingly.
-- The @README.md file should consist of a project overview for end-users, not a technical explanation of the project. It should include:
-  - Table of contents
-  - Quick start / Installation
-  - Core features
-  - Configuration reference
-  - Usage
-  - Development / Contribution guidelines
+- When unsure about something, you MUST ask the user for clarification.
+- Always choose robust solutions over hacky fixes.
+- ALWAYS write tests for new components.
+- Do NOT write type documentation unless explicitly asked.
+- Once a feature is complete, update `README.md` and `AGENTS.md` accordingly.
 
-### Symfony Bundles
+### Adding a new Strategy
 
-- Symfony bundles are meant to be re-used and integrated in other Symfony projects. When developing features, keep this in mind.  
-- Architecture, naming, design, extensibility and easiness to install and use should be key priorities to consider when developing this project.
+1. Create `src/Strategy/MyStrategy.php` implementing `ChunkingStrategyInterface`
+2. Implement `process(string $data, bool $isEnd): \Generator` and `reset(): void`
+3. Add metadata key `strategy` to each yielded `Chunk`
+4. Add unit tests in `tests/Unit/Strategy/`
+
+### Adding a new Post-Processor
+
+1. Create `src/PostProcessor/MyProcessor.php` implementing `ChunkPostProcessorInterface`
+2. Implement `process(\Generator $chunks, string $source = ''): \Generator`
+3. Stream chunks — avoid buffering unless strictly necessary
+4. Add unit tests in `tests/Unit/PostProcessor/`
 
 ## 📚 References
 
 - **Source code**: `/src`
 - **Tests**: `/tests`
 - **README**: User documentation
-- **Symfony Docs**: https://symfony.com/doc/current/bundles.html
-
-# FIRST READING OF THIS FILE
-
-If you read this, it means the user did not yet fill this file.  
-Ask the users the following questions :
-- What problem is this bundle trying to solve?
-- What solution have you considered to do so?
-- What architecture have you thought about?
-- What should be the name of the bundle?
-- What are some typical usecases for this?
-
-When answered, read this file again (@AGENTS.md) and fill the parts that contain "[TO BE FILLED]" content. Keep the file under 500 lines.  
-This file will be read by every future developer working on this project.
-
-Keep it simple, efficient and clear.  
-Great documentation is easy to read.  
-Do NOT overcomplicate things.  
-Do NOT include examples for everything.
