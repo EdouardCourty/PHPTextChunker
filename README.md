@@ -1,5 +1,7 @@
 # php-text-chunker
 
+[![PHP CI](https://github.com/EdouardCourty/PHPTextChunker/actions/workflows/ci.yml/badge.svg)](https://github.com/EdouardCourty/PHPTextChunker/actions/workflows/ci.yml)
+
 A framework-agnostic PHP library for splitting text and files into meaningful chunks, using pluggable strategies and a composable post-processing pipeline.
 
 ## Table of Contents
