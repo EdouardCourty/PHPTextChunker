@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ecourty\TextChunker\Tests\Unit;
 
+use Ecourty\TextChunker\Exception\SourceNotFoundException;
 use Ecourty\TextChunker\PostProcessor\ChunkFilterPostProcessor;
 use Ecourty\TextChunker\PostProcessor\TextNormalizationPostProcessor;
 use Ecourty\TextChunker\Strategy\ParagraphChunkingStrategy;
@@ -88,8 +89,10 @@ class TextChunkerTest extends TestCase
 
     public function testSetFileThrowsOnMissingFile(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        (new TextChunker())->setFile('/non/existent/file.txt');
+        $this->expectException(SourceNotFoundException::class);
+        iterator_to_array(
+            (new TextChunker())->setFile('/non/existent/file.txt')->chunk(new ParagraphChunkingStrategy()),
+        );
     }
 
     public function testChunkThrowsWhenNoSource(): void

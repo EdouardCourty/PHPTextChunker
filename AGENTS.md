@@ -25,24 +25,28 @@ A strategy-based chunker with a streaming-first design:
 ```
 TextChunker (entry point)
   ├── setFile(path) / setText(string)
+  ├── withReader(ReaderInterface)
   ├── withMetadata(array)
   ├── withPostProcessor(ChunkPostProcessorInterface)
   └── chunk(ChunkingStrategyInterface): Generator<Chunk>
            │
+           ├── ReaderInterface (streams raw data from source)
            ├── Strategy (splits data into Chunks)
            └── PostProcessors (pipeline applied in order)
 ```
 
 ### Main Components
 
-| Component | Location | Role |
-|---|---|---|
-| `TextChunker` | `src/TextChunker.php` | Entry point. Orchestrates chunking. |
-| `Chunk` | `src/ValueObject/Chunk.php` | Immutable value object: text + position + metadata |
-| `ChunkingStrategyInterface` | `src/Contract/` | Contract for splitting strategies |
-| `ChunkPostProcessorInterface` | `src/Contract/` | Contract for post-processors |
-| Strategies | `src/Strategy/` | 4 built-in splitting strategies |
-| Post-processors | `src/PostProcessor/` | 4 built-in post-processing transforms |
+| Component                     | Location                    | Role                                               |
+|-------------------------------|-----------------------------|----------------------------------------------------|
+| `TextChunker`                 | `src/TextChunker.php`       | Entry point. Orchestrates chunking.                |
+| `Chunk`                       | `src/ValueObject/Chunk.php` | Immutable value object: text + position + metadata |
+| `ChunkingStrategyInterface`   | `src/Contract/`             | Contract for splitting strategies                  |
+| `ChunkPostProcessorInterface` | `src/Contract/`             | Contract for post-processors                       |
+| `ReaderInterface`             | `src/Contract/`             | Contract for file/stream readers                   |
+| `LocalFileReader`             | `src/Reader/`               | Default reader using native PHP file functions     |
+| Strategies                    | `src/Strategy/`             | 8 built-in splitting strategies                    |
+| Post-processors               | `src/PostProcessor/`        | 8 built-in post-processing transforms              |
 
 ---
 
@@ -134,6 +138,13 @@ Run tests: `composer test`
 2. Implement `process(\Generator $chunks, string $source = ''): \Generator`
 3. Stream chunks — avoid buffering unless strictly necessary
 4. Add unit tests in `tests/Unit/PostProcessor/`
+
+### Adding a new Reader
+
+1. Create `src/Reader/MyReader.php` implementing `ReaderInterface`
+2. Implement `readChunks(string $path, int $bufferSize): \Generator` — yield `string` data chunks
+3. Throw `\RuntimeException` (or a subtype) if the source cannot be opened or read
+4. Add unit tests in `tests/Unit/Reader/`
 
 ## 📚 References
 

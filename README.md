@@ -12,6 +12,7 @@ A framework-agnostic PHP library for splitting text and files into meaningful ch
 - [Chunking Strategies](#chunking-strategies)
 - [Post-Processors](#post-processors)
 - [Configuration Reference](#configuration-reference)
+- [Custom Readers](#custom-readers)
 - [Performance](#performance)
 - [Datasets](#datasets)
 - [Development](#development)
@@ -112,6 +113,7 @@ Post-processors are applied in sequence after chunking. Chain them with `withPos
 | `withMetadata(array $meta)`        | Attach global metadata to every chunk           |
 | `withPostProcessor(...)`           | Add a post-processor to the pipeline            |
 | `withPostProcessors(...)`          | Add multiple post-processors at once (variadic) |
+| `withReader(ReaderInterface)`      | Inject a custom reader (see below)              |
 | `chunk(ChunkingStrategyInterface)` | Returns a `Generator<Chunk>`                    |
 
 ### Chunk
@@ -123,6 +125,61 @@ Post-processors are applied in sequence after chunking. Chain them with `withPos
 | `getMetadata()`       | `array` — associated metadata    |
 | `getLength()`         | `int` — character count          |
 | `withMetadata(array)` | New `Chunk` with merged metadata |
+
+---
+
+## Custom Readers
+
+By default, `setFile()` reads from the local filesystem via `LocalFileReader`. To read from a remote source (S3, Azure Blob, SFTP, etc.), implement `ReaderInterface` and inject it via `withReader()`.
+
+`ReaderInterface` has a single method: `readChunks(string $path, int $bufferSize): \Generator<string>`. Yield string chunks of arbitrary size — the chunking strategies handle the rest. The `$path` passed to `readChunks()` is whatever string you gave to `setFile()`, so it can be an S3 key, a URI, or any identifier your reader understands.
+
+**Example with [Flysystem](https://flysystem.thephpleague.com/) (works with S3, Azure, SFTP, GCS, and more):**
+
+```php
+use League\Flysystem\Filesystem;
+use Ecourty\TextChunker\Contract\ReaderInterface;
+use Ecourty\TextChunker\TextChunker;
+use Ecourty\TextChunker\Strategy\ParagraphChunkingStrategy;
+
+class FlysystemReader implements ReaderInterface
+{
+    public function __construct(private Filesystem $filesystem) {}
+
+    public function readChunks(string $path, int $bufferSize): \Generator
+    {
+        $stream = $this->filesystem->readStream($path);
+
+        try {
+            while (!feof($stream)) {
+                $data = fread($stream, $bufferSize);
+                if ($data === false) {
+                    break;
+                }
+                yield $data;
+            }
+        } finally {
+            fclose($stream);
+        }
+    }
+}
+
+// S3 example
+$adapter = new \League\Flysystem\AwsS3V3\AwsS3V3Adapter($s3Client, 'my-bucket');
+$filesystem = new Filesystem($adapter);
+
+foreach (
+    (new TextChunker())
+        ->withReader(new FlysystemReader($filesystem))
+        ->setFile('documents/report.txt')  // S3 key
+        ->chunk(new ParagraphChunkingStrategy())
+    as $chunk
+) {
+    echo $chunk->getText();
+}
+```
+
+Swap the adapter for `FtpAdapter`, `AzureBlobStorageAdapter`, `SftpAdapter`, etc. — the chunker stays the same.
 
 ---
 

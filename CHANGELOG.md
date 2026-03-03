@@ -3,6 +3,21 @@
 This file contains information about every addition, update and deletion in the `ecourty/text-chunker` library.  
 It is recommended to read this file before updating the library to a new version.
 
+## Unreleased
+
+#### Additions
+
+- Added [`ReaderInterface`](./src/Contract/ReaderInterface.php) contract for custom data sources (S3, Azure Blob, SFTP, etc.)
+- Added [`LocalFileReader`](./src/Reader/LocalFileReader.php) as the default filesystem reader
+- Added `withReader(ReaderInterface)` on `TextChunker` to inject a custom reader
+
+#### Breaking Changes
+
+- `setFile()` no longer validates file existence/readability eagerly — validation is now deferred to `chunk()` time (performed by the active reader). Code relying on `setFile()` throwing immediately must be updated.
+- Exceptions thrown for missing/unreadable files are now `\RuntimeException` instead of `\InvalidArgumentException`.
+
+---
+
 ## v1.0.0
 
 Initial release of the library.
