@@ -3,7 +3,7 @@
 This file contains information about every addition, update and deletion in the `ecourty/text-chunker` library.  
 It is recommended to read this file before updating the library to a new version.
 
-## Unreleased
+## v1.1.0
 
 #### Additions
 

@@ -179,8 +179,6 @@ foreach (
 }
 ```
 
-Swap the adapter for `FtpAdapter`, `AzureBlobStorageAdapter`, `SftpAdapter`, etc. — the chunker stays the same.
-
 ---
 
 ## Performance
