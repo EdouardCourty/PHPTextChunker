@@ -6,11 +6,13 @@ namespace Ecourty\TextChunker;
 
 use Ecourty\TextChunker\Contract\ChunkingStrategyInterface;
 use Ecourty\TextChunker\Contract\ChunkPostProcessorInterface;
+use Ecourty\TextChunker\Contract\ReaderInterface;
+use Ecourty\TextChunker\Reader\LocalFileReader;
 use Ecourty\TextChunker\ValueObject\Chunk;
 
 class TextChunker
 {
-    private const int READ_BUFFER_SIZE = 8192;
+    private const int READ_BUFFER_SIZE = 8192; // 8 KB
 
     private ?string $filePath = null;
     private ?string $text = null;
@@ -18,17 +20,10 @@ class TextChunker
     private array $globalMetadata = [];
     /** @var ChunkPostProcessorInterface[] */
     private array $postProcessors = [];
+    private ?ReaderInterface $reader = null;
 
     public function setFile(string $filePath): self
     {
-        if (!file_exists($filePath)) {
-            throw new \InvalidArgumentException(\sprintf('File not found: %s', $filePath));
-        }
-
-        if (!is_readable($filePath)) {
-            throw new \InvalidArgumentException(\sprintf('File not readable: %s', $filePath));
-        }
-
         $this->filePath = $filePath;
         $this->text = null;
 
@@ -49,6 +44,13 @@ class TextChunker
     public function withMetadata(array $metadata): self
     {
         $this->globalMetadata = array_merge($this->globalMetadata, $metadata);
+
+        return $this;
+    }
+
+    public function withReader(ReaderInterface $reader): self
+    {
+        $this->reader = $reader;
 
         return $this;
     }
@@ -92,28 +94,25 @@ class TextChunker
      */
     private function generateChunksFromFile(ChunkingStrategyInterface $strategy): \Generator
     {
-        $fileHandle = fopen((string) $this->filePath, 'r');
+        $reader = $this->reader ?? new LocalFileReader();
+        $buffer = null;
+        $hasBuffer = false;
 
-        if ($fileHandle === false) {
-            throw new \RuntimeException(\sprintf('Failed to open file: %s', $this->filePath));
-        }
-
-        try {
-            while (!feof($fileHandle)) {
-                $data = fread($fileHandle, self::READ_BUFFER_SIZE);
-
-                if ($data === false) {
-                    break;
-                }
-
-                $isEnd = feof($fileHandle);
-
-                foreach ($strategy->process($data, $isEnd) as $chunk) {
+        foreach ($reader->readChunks((string) $this->filePath, self::READ_BUFFER_SIZE) as $data) {
+            if ($hasBuffer) {
+                foreach ($strategy->process((string) $buffer, false) as $chunk) {
                     yield $this->applyGlobalMetadata($chunk);
                 }
             }
-        } finally {
-            fclose($fileHandle);
+
+            $buffer = $data;
+            $hasBuffer = true;
+        }
+
+        if ($hasBuffer) {
+            foreach ($strategy->process((string) $buffer, true) as $chunk) {
+                yield $this->applyGlobalMetadata($chunk);
+            }
         }
     }
 
