@@ -60,6 +60,9 @@ final class LineChunkingStrategy implements ChunkingStrategyInterface
         }
     }
 
+    /**
+     * @phpstan-impure
+     */
     private function buildChunk(): ?Chunk
     {
         $text = implode("\n", $this->pendingLines);
