@@ -61,13 +61,6 @@ final class DialogueChunkingStrategy implements ChunkingStrategyInterface
         }
 
         if ($isEnd) {
-            if ($this->buffer !== '') {
-                $trimmed = mb_trim($this->buffer);
-                if ($trimmed !== '') {
-                    $this->pendingLines[] = $trimmed;
-                }
-            }
-
             yield from $this->emitChunk();
         }
     }

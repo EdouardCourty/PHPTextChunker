@@ -48,19 +48,5 @@ final class ParagraphChunkingStrategy implements ChunkingStrategyInterface
 
             ++$this->position;
         }
-
-        if ($isEnd && $this->buffer !== '') {
-            $trimmed = mb_trim($this->buffer);
-            if ($trimmed !== '') {
-                yield new Chunk(
-                    text: $trimmed,
-                    position: $this->position,
-                    metadata: [
-                        'strategy' => 'paragraph',
-                        'length' => mb_strlen($trimmed),
-                    ],
-                );
-            }
-        }
     }
 }

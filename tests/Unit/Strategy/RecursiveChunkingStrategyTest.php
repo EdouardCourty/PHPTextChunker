@@ -65,7 +65,14 @@ class RecursiveChunkingStrategyTest extends TestCase
 
         $chunks = iterator_to_array($strategy->process($longText, true), false);
 
-        $depths = array_unique(array_map(fn ($c) => $c->getMetadata()['depth'], $chunks));
+        $depths = array_unique(array_map(function ($c) {
+            $depth = $c->getMetadata()['depth'];
+            if (!\is_int($depth)) {
+                throw new \RuntimeException('Expected "depth" metadata to be an int');
+            }
+
+            return $depth;
+        }, $chunks));
         $this->assertNotEmpty($depths);
         \assert($depths !== []);
         $this->assertGreaterThanOrEqual(1, max($depths));
