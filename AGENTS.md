@@ -45,7 +45,7 @@ TextChunker (entry point)
 | `ChunkPostProcessorInterface` | `src/Contract/`             | Contract for post-processors                       |
 | `ReaderInterface`             | `src/Contract/`             | Contract for file/stream readers                   |
 | `LocalFileReader`             | `src/Reader/`               | Default reader using native PHP file functions     |
-| Strategies                    | `src/Strategy/`             | 8 built-in splitting strategies                    |
+| Strategies                    | `src/Strategy/`             | 10 built-in splitting strategies                   |
 | Post-processors               | `src/PostProcessor/`        | 8 built-in post-processing transforms              |
 
 ---
@@ -78,7 +78,9 @@ TextChunker (entry point)
 | `ParagraphChunkingStrategy` | Double newlines (`\n\n`) |
 | `SentenceChunkingStrategy` | Sentence-ending punctuation (`[.!?]`) |
 | `FixedSizeChunkingStrategy` | Fixed character count (configurable) |
+| `DialogueChunkingStrategy` | Dialogue lines, context-aware grouping |
 | `MarkdownChunkingStrategy` | Markdown headers (`#` to `######`) |
+| `HtmlChunkingStrategy` | HTML opening tags (configurable list) or XPath selector; optional tag stripping and comment keeping |
 | `WordCountChunkingStrategy` | Fixed word count |
 | `RegexChunkingStrategy` | Configurable regex pattern |
 | `LineChunkingStrategy` | N consecutive lines per chunk |

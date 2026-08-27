@@ -31,7 +31,7 @@ composer require ecourty/text-chunker
 
 ## Core Features
 
-- **9 built-in strategies**: paragraph, sentence, fixed-size, dialogue, markdown, word count, regex, line, recursive
+- **10 built-in strategies**: paragraph, sentence, fixed-size, dialogue, markdown, html, word count, regex, line, recursive
 - **8 built-in post-processors**: overlap, token limit, metadata enrichment, filtering, chunk merger, text normalization, deduplication, regex replace
 - **Streaming architecture**: processes large files in 8KB buffers — minimal memory usage
 - **Works with files and strings**: `setFile()` or `setText()`
@@ -76,12 +76,38 @@ foreach ($chunker->setText($myText)->chunk(new SentenceChunkingStrategy()) as $c
 | `FixedSizeChunkingStrategy` | Fixed character count                      | `chunkSize` (default: 1000)                                     |
 | `DialogueChunkingStrategy`  | Dialogue lines, context-aware grouping     | `targetChunkSize`, `minChunkSize`                               |
 | `MarkdownChunkingStrategy`  | Markdown headers (`#` to `######`)         | `minHeadingLevel`, `maxHeadingLevel`                            |
+| `HtmlChunkingStrategy`      | HTML opening tags or XPath selector        | `tags[]`, `stripTags`, `selector`, `keepComments`               |
 | `WordCountChunkingStrategy` | Fixed word count, respects word boundaries | `wordCount` (default: 200)                                      |
 | `RegexChunkingStrategy`     | Configurable regex pattern                 | `pattern`, `delimiterPosition` (`None` \| `Prefix` \| `Suffix`) |
 | `LineChunkingStrategy`      | N consecutive lines per chunk              | `linesPerChunk` (default: 10)                                   |
 | `RecursiveChunkingStrategy` | Cascade of strategies with a size limit    | `strategies[]`, `maxChunkSize`                                  |
 
 `RecursiveChunkingStrategy` applies `strategies[0]` to the stream, and immediately re-splits any chunk exceeding `maxChunkSize` using `strategies[1]`, then `strategies[2]`, etc. Streaming-safe — never buffers more than one chunk at a time.
+
+### HTML chunking
+
+`HtmlChunkingStrategy` splits HTML documents on the opening tags of your choice (default: `<h1>`–`<h6>`). Each chunk keeps its raw markup and exposes the opening tag name and its attributes through metadata. Content before the first tag is yielded as a separate chunk with a `null` tag.
+
+```php
+use Ecourty\TextChunker\Strategy\HtmlChunkingStrategy;
+
+// Split an HTML page on headings
+foreach ($chunker->setText($html)->chunk(new HtmlChunkingStrategy()) as $chunk) {
+    $chunk->getMetadata()['tag'];         // e.g. 'h2'
+    $chunk->getMetadata()['attributes'];  // e.g. ['id' => 'history', 'class' => 'section-heading']
+}
+
+// Split on block elements instead, keeping only visible text
+new HtmlChunkingStrategy(tags: ['section', 'article'], stripTags: true);
+
+// Use an XPath selector for precise extraction (requires buffering the whole document)
+new HtmlChunkingStrategy(selector: "//section[contains(@class, 'content')]");
+
+// Keep HTML comments in chunks (excluded by default)
+new HtmlChunkingStrategy(keepComments: true);
+```
+
+In tags mode, the strategy is fully streaming and never loads more than one section in memory. Comments are skipped, and `<script>`/`<style>` contents never trigger splits. With `stripTags: true`, only the visible text is kept (markup, comments, scripts and styles removed). Both options apply in XPath mode too: comments are removed unless `keepComments` is enabled, and stripped chunks exclude `<script>`/`<style>` content. In XPath mode (`selector`), the document is buffered and parsed with `DOMDocument`; every matched node yields a chunk containing its outer HTML (or its text content with `stripTags`).
 
 ---
 

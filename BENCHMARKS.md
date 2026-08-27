@@ -21,8 +21,12 @@ composer bench
 | King James Bible                             | `datasets/bible_kjv.txt`                     | 4.26 MB  |
 | Les Misérables (5 tomes, FR)                 | `datasets/les_miserables.txt`                | 2.54 MB  |
 | Encyclopaedia Britannica 11th Ed. (92 vols.) | `datasets/encyclopaedia_britannica_11th.txt` | 100.8 MB |
+| Wikipedia — PHP (EN)                         | `datasets/html/wikipedia_php_en.html`        | 1.20 MB  |
+| Wikipedia — Paris (FR)                       | `datasets/html/wikipedia_paris_fr.html`      | 2.90 MB  |
+| Wikipedia — Tour Eiffel (FR)                 | `datasets/html/wikipedia_eiffel_tower_fr.html` | 0.94 MB |
 
 All texts are public domain, sourced from [Project Gutenberg](https://www.gutenberg.org/). PG headers and footers were stripped before benchmarking.
+Wikipedia HTML pages are full rendered articles, licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (see `datasets/html/README.md`).
 
 ---
 
@@ -55,6 +59,18 @@ Throughput is computed as `file_size / time_avg`. Memory is the peak RSS reporte
 | `ParagraphChunkingStrategy`          | 104 ms    | 24.4 MB/s  | 7.8 MB      |
 | `RecursiveChunkingStrategy`          | 146 ms    | 17.4 MB/s  | 24.6 MB     |
 | `WordCountChunkingStrategy(200)`     | 219 ms    | 11.6 MB/s  | 1.9 MB      |
+
+### Wikipedia HTML pages
+
+| Strategy                                          | Page                | Time (ms) | Throughput | Peak memory |
+|---------------------------------------------------|---------------------|-----------|------------|-------------|
+| `HtmlChunkingStrategy(stripTags: true)`           | Tour Eiffel (0.94 MB) | 8.9 ms   | 105.6 MB/s | 2.0 MB      |
+| `HtmlChunkingStrategy` (tags)                     | PHP (1.20 MB)       | 16.1 ms   | 74.5 MB/s  | 3.5 MB      |
+| `HtmlChunkingStrategy(selector: '//h2')`          | PHP (1.20 MB)       | 18.9 ms   | 63.8 MB/s  | 4.0 MB      |
+| `HtmlChunkingStrategy` (tags)                     | Paris (2.90 MB)     | 41.5 ms   | 69.9 MB/s  | 4.0 MB      |
+| `HtmlChunkingStrategy(selector: '//div[...]')`    | Paris (2.90 MB)     | 51.0 ms   | 56.9 MB/s  | 7.5 MB      |
+
+> Tags mode streams with a bounded buffer (~2–4 MB peak regardless of page size). XPath mode parses the whole document with `DOMDocument`, which costs ~15–30% more time and grows memory with page size — still fast enough for typical web pages.
 
 ### Encyclopaedia Britannica 11th Ed. (100.8 MB)
 
@@ -90,6 +106,7 @@ Measured in isolation on a **~50 KB excerpt** of the Bible KJV (pre-chunked with
 ## Key Takeaways
 
 - **Fastest strategies**: `FixedSizeChunkingStrategy`, `LineChunkingStrategy`, and `SentenceChunkingStrategy` consistently process text at **80–100 MB/s**.
+- **HTML**: `HtmlChunkingStrategy` tags mode reaches **70–105 MB/s** on real Wikipedia pages with flat memory. XPath mode trades ~20% speed for precise DOM-based selection.
 - **Slowest strategy**: `WordCountChunkingStrategy` — word boundary counting is inherently O(n words), making it **7–8× slower** than fixed-size strategies.
 - **Memory**: The library is streaming-first. Most strategies stay at the PHP baseline (~2 MB) regardless of input size. `ParagraphChunkingStrategy` and `RegexChunkingStrategy` buffer between delimiters; `RecursiveChunkingStrategy` buffers chunks for re-splitting.
 - **Post-processors**: All 8 processors add negligible overhead (< 3 ms / 50 KB). Chain freely.

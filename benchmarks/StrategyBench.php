@@ -6,6 +6,7 @@ namespace Ecourty\TextChunker\Benchmarks;
 
 use Ecourty\TextChunker\Strategy\DialogueChunkingStrategy;
 use Ecourty\TextChunker\Strategy\FixedSizeChunkingStrategy;
+use Ecourty\TextChunker\Strategy\HtmlChunkingStrategy;
 use Ecourty\TextChunker\Strategy\LineChunkingStrategy;
 use Ecourty\TextChunker\Strategy\ParagraphChunkingStrategy;
 use Ecourty\TextChunker\Strategy\RecursiveChunkingStrategy;
@@ -173,6 +174,53 @@ class StrategyBench
             [new ParagraphChunkingStrategy(), new SentenceChunkingStrategy()],
             500,
         ));
+    }
+
+    // -------------------------------------------------------------------------
+    // Wikipedia HTML pages (~1–3 MB each)
+    // -------------------------------------------------------------------------
+
+    #[Subject]
+    #[BeforeMethods('setUp')]
+    #[Groups(['wikipedia', 'html'])]
+    public function benchWikipediaPhpEnHtmlTags(): void
+    {
+        $this->runOnFile(DATASET_WIKIPEDIA_PHP_EN, new HtmlChunkingStrategy());
+    }
+
+    #[Subject]
+    #[BeforeMethods('setUp')]
+    #[Groups(['wikipedia', 'html'])]
+    public function benchWikipediaPhpEnHtmlXPath(): void
+    {
+        $this->runOnFile(DATASET_WIKIPEDIA_PHP_EN, new HtmlChunkingStrategy(selector: '//h2'));
+    }
+
+    #[Subject]
+    #[BeforeMethods('setUp')]
+    #[Groups(['wikipedia', 'html'])]
+    public function benchWikipediaParisFrHtmlTags(): void
+    {
+        $this->runOnFile(DATASET_WIKIPEDIA_PARIS_FR, new HtmlChunkingStrategy());
+    }
+
+    #[Subject]
+    #[BeforeMethods('setUp')]
+    #[Groups(['wikipedia', 'html'])]
+    public function benchWikipediaParisFrHtmlXPath(): void
+    {
+        $this->runOnFile(
+            DATASET_WIKIPEDIA_PARIS_FR,
+            new HtmlChunkingStrategy(selector: "//div[contains(@class, 'mw-heading')]"),
+        );
+    }
+
+    #[Subject]
+    #[BeforeMethods('setUp')]
+    #[Groups(['wikipedia', 'html'])]
+    public function benchWikipediaEiffelTowerFrHtmlTagsStrip(): void
+    {
+        $this->runOnFile(DATASET_WIKIPEDIA_EIFFEL_TOWER_FR, new HtmlChunkingStrategy(stripTags: true));
     }
 
     // -------------------------------------------------------------------------
