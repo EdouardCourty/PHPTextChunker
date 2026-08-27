@@ -3,6 +3,22 @@
 This file contains information about every addition, update and deletion in the `ecourty/text-chunker` library.  
 It is recommended to read this file before updating the library to a new version.
 
+## Unreleased
+
+#### Additions
+
+- Added [`HtmlChunkingStrategy`](./src/Strategy/HtmlChunkingStrategy.php) for splitting HTML documents
+  - Tags mode (default): streaming split on configurable opening tags (`<h1>`–`<h6>` by default), with tag name and attributes exposed in chunk metadata
+  - XPath mode: `selector` option extracts chunks matching an XPath expression via `DOMDocument` (each matched node yields its outer HTML)
+  - Options: `tags[]`, `stripTags` (keep visible text only), `keepComments` (keep HTML comments, excluded by default), `selector`
+- Added real-world Wikipedia HTML datasets under [`datasets/html/`](./datasets/html/) with fixtures tests and benchmarks
+
+#### Requirements
+
+- The library now requires the `ext-dom` PHP extension (bundled and enabled by default)
+
+---
+
 ## v1.1.0
 
 #### Additions
