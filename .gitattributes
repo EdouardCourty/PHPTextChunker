@@ -1,2 +1,6 @@
 AGENTS.md export-ignore
 /benchmarks export-ignore
+
+# Ce sont des fixtures de test/benchmark, pas du code du repo :
+# on les exclut du calcul des langages sur GitHub.
+/datasets/html/* linguist-vendored
