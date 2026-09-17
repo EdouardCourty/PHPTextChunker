@@ -3,6 +3,20 @@
 This file contains information about every addition, update and deletion in the `ecourty/text-chunker` library.  
 It is recommended to read this file before updating the library to a new version.
 
+## v1.3.0
+
+#### Requirements
+
+- The library now requires **PHP >= 8.4** (up from 8.3), driven by the `phpunit/phpunit` v13 upgrade below, which itself requires PHP >= 8.4.1
+- No source-level changes were needed — the library did not rely on any PHP 8.3-only syntax
+
+#### Maintenance
+
+- Bumped dev dependencies to latest versions: `friendsofphp/php-cs-fixer` (^3.95), `phpbench/phpbench` (^1.7), `phpstan/phpstan` (2.2.14), `phpunit/phpunit` (^13.3, major bump from v12)
+- No changes to the public API surface — full test suite (166 tests) and benchmarks pass unchanged
+
+---
+
 ## v1.2.0
 
 #### Additions

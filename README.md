@@ -25,7 +25,7 @@ A framework-agnostic PHP library for splitting text and files into meaningful ch
 composer require ecourty/text-chunker
 ```
 
-**Requirements**: PHP >= 8.3
+**Requirements**: PHP >= 8.4
 
 ---
 
