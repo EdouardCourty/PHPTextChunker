@@ -97,6 +97,57 @@ class MarkdownChunkingStrategyTest extends TestCase
         $this->assertEquals(0, $chunks[0]->getPosition());
     }
 
+    public function testSectionSplitAcrossStreamedBuffersStaysInOneChunk(): void
+    {
+        $strategy = new MarkdownChunkingStrategy();
+
+        $chunks = [
+            ...$strategy->process("Intro.\n# A\nBody of A,", false),
+            ...$strategy->process(" continued.\n\n## B\nBody", false),
+            ...$strategy->process(" of B.\nMore B.\n", false),
+            ...$strategy->process("## C\nBody of C.", true),
+        ];
+
+        $this->assertSame(
+            ['Intro.', "# A\nBody of A, continued.", "## B\nBody of B.\nMore B.", "## C\nBody of C."],
+            array_map(static fn ($c) => $c->getText(), $chunks),
+        );
+        $this->assertSame([0, 1, 2, 3], array_map(static fn ($c) => $c->getPosition(), $chunks));
+        $this->assertNull($chunks[0]->getMetadata()['heading_level']);
+        $this->assertSame('B', $chunks[2]->getMetadata()['heading_text']);
+    }
+
+    public function testStreamedOutputMatchesSingleBufferOutput(): void
+    {
+        $input = "# Titre é\n\n" . str_repeat('Contenu éàü 日本. ', 300) . "\n## Sub\n\n" . str_repeat('Ça «va» ', 800);
+
+        $whole = new MarkdownChunkingStrategy();
+        $expected = array_map(static fn ($c) => $c->getText(), iterator_to_array($whole->process($input, true)));
+
+        $streamed = new MarkdownChunkingStrategy();
+        $actual = [];
+        $parts = str_split($input, 8192);
+        foreach ($parts as $i => $part) {
+            foreach ($streamed->process($part, $i === \count($parts) - 1) as $chunk) {
+                $actual[] = $chunk->getText();
+            }
+        }
+
+        $this->assertSame($expected, $actual);
+    }
+
+    public function testResetClearsStreamingState(): void
+    {
+        $strategy = new MarkdownChunkingStrategy();
+        iterator_to_array($strategy->process("# A\nContent A.\n# B\nPartial", false));
+
+        $strategy->reset();
+        $chunks = iterator_to_array($strategy->process("# C\nContent C.", true));
+
+        $this->assertCount(1, $chunks);
+        $this->assertSame("# C\nContent C.", $chunks[0]->getText());
+    }
+
     public function testInvalidMinHeadingLevelThrows(): void
     {
         $this->expectException(\InvalidArgumentException::class);

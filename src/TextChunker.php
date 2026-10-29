@@ -98,7 +98,7 @@ class TextChunker
         $buffer = null;
         $hasBuffer = false;
 
-        foreach ($reader->readChunks((string) $this->filePath, self::READ_BUFFER_SIZE) as $data) {
+        foreach ($this->completeUtf8Sequences($reader->readChunks((string) $this->filePath, self::READ_BUFFER_SIZE)) as $data) {
             if ($hasBuffer) {
                 foreach ($strategy->process((string) $buffer, false) as $chunk) {
                     yield $this->applyGlobalMetadata($chunk);
@@ -113,6 +113,55 @@ class TextChunker
             foreach ($strategy->process((string) $buffer, true) as $chunk) {
                 yield $this->applyGlobalMetadata($chunk);
             }
+        }
+    }
+
+    /**
+     * Moves a multibyte character cut by a read boundary to the start of the next piece,
+     * so that strategies never receive a partial character.
+     *
+     * @param \Generator<string> $pieces
+     *
+     * @return \Generator<string>
+     */
+    private function completeUtf8Sequences(\Generator $pieces): \Generator
+    {
+        $carry = '';
+
+        foreach ($pieces as $piece) {
+            $data = $carry . $piece;
+            $length = \strlen($data);
+            $carry = '';
+
+            for ($back = 1; $back <= min(3, $length); ++$back) {
+                $byte = \ord($data[$length - $back]);
+
+                if (($byte & 0xC0) === 0x80) {
+                    continue; // continuation byte, look for its lead byte
+                }
+
+                $expected = match (true) {
+                    $byte >= 0xF0 => 4,
+                    $byte >= 0xE0 => 3,
+                    $byte >= 0xC0 => 2,
+                    default => 1,
+                };
+
+                if ($expected > $back) {
+                    $carry = substr($data, $length - $back);
+                    $data = substr($data, 0, $length - $back);
+                }
+
+                break;
+            }
+
+            if ($data !== '') {
+                yield $data;
+            }
+        }
+
+        if ($carry !== '') {
+            yield $carry;
         }
     }
 

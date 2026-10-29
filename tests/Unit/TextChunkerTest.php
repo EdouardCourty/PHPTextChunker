@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Ecourty\TextChunker\Tests\Unit;
 
+use Ecourty\TextChunker\Contract\ReaderInterface;
 use Ecourty\TextChunker\Exception\SourceNotFoundException;
 use Ecourty\TextChunker\PostProcessor\ChunkFilterPostProcessor;
 use Ecourty\TextChunker\PostProcessor\TextNormalizationPostProcessor;
+use Ecourty\TextChunker\Strategy\FixedSizeChunkingStrategy;
 use Ecourty\TextChunker\Strategy\ParagraphChunkingStrategy;
 use Ecourty\TextChunker\TextChunker;
 use PHPUnit\Framework\TestCase;
@@ -143,5 +145,30 @@ class TextChunkerTest extends TestCase
         $chunks = iterator_to_array($chunker->chunk(new ParagraphChunkingStrategy()), false);
 
         $this->assertCount(1, $chunks);
+    }
+
+    public function testMultibyteCharacterSplitAcrossReadsIsReassembled(): void
+    {
+        $reader = new class implements ReaderInterface {
+            public function readChunks(string $path, int $bufferSize): \Generator
+            {
+                // "é" is 0xC3 0xA9, "日" is 0xE6 0x97 0xA5: each is cut across two reads
+                yield "caf\xC3";
+                yield "\xA9 \xE6\x97";
+                yield "\xA5 fin";
+            }
+        };
+
+        $path = tempnam(sys_get_temp_dir(), 'chunker_');
+        $this->assertNotFalse($path);
+
+        try {
+            $chunker = (new TextChunker())->setFile($path)->withReader($reader);
+            $chunks = iterator_to_array($chunker->chunk(new FixedSizeChunkingStrategy(5)), false);
+        } finally {
+            unlink($path);
+        }
+
+        $this->assertSame(['café ', '日 fin'], array_map(static fn ($c) => $c->getText(), $chunks));
     }
 }

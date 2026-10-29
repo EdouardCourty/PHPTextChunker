@@ -90,4 +90,16 @@ class RegexChunkingStrategyTest extends TestCase
 
         $this->assertCount(3, $chunks);
     }
+
+    public function testBufferEndingOnDelimiterDoesNotMergeFollowingText(): void
+    {
+        $strategy = new RegexChunkingStrategy('/\n\n/');
+
+        $chunks = [
+            ...$strategy->process("first\n\n", false),
+            ...$strategy->process('second', true),
+        ];
+
+        $this->assertSame(['first', 'second'], array_map(static fn ($c) => $c->getText(), $chunks));
+    }
 }

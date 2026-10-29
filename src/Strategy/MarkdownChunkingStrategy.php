@@ -11,6 +11,7 @@ final class MarkdownChunkingStrategy implements ChunkingStrategyInterface
 {
     private string $buffer = '';
     private int $position = 0;
+    private int $scanOffset = 0;
 
     public function __construct(
         private readonly int $minHeadingLevel = 1,
@@ -31,26 +32,45 @@ final class MarkdownChunkingStrategy implements ChunkingStrategyInterface
     {
         $this->buffer = '';
         $this->position = 0;
+        $this->scanOffset = 0;
     }
 
     public function process(string $data, bool $isEnd): \Generator
     {
         $this->buffer .= $data;
 
+        $pattern = \sprintf('/^(#{%d,%d})\s+(.+)$/m', $this->minHeadingLevel, $this->maxHeadingLevel);
+
         if (!$isEnd) {
-            // Keep processing only when we have complete lines
-            $lastNewline = mb_strrpos($this->buffer, "\n");
+            // Only complete lines can be inspected for headings
+            $lastNewline = strrpos($this->buffer, "\n");
             if ($lastNewline === false) {
                 return;
             }
-            $toProcess = mb_substr($this->buffer, 0, $lastNewline + 1);
-            $this->buffer = mb_substr($this->buffer, $lastNewline + 1);
+
+            // @phpstan-ignore-next-line regexp.pattern (pattern is valid: constructor guarantees min <= max)
+            $found = preg_match_all($pattern, substr($this->buffer, 0, $lastNewline + 1), $matches, \PREG_OFFSET_CAPTURE, $this->scanOffset);
+            $this->scanOffset = $lastNewline + 1;
+
+            if ($found === false || $found === 0) {
+                return;
+            }
+
+            // The last section may continue in the next buffer: hold it back until the next heading or the end
+            $lastHeadingStart = $matches[0][$found - 1][1];
+            if ($lastHeadingStart === 0) {
+                return;
+            }
+
+            $toProcess = substr($this->buffer, 0, $lastHeadingStart);
+            $this->buffer = substr($this->buffer, $lastHeadingStart);
+            $this->scanOffset -= $lastHeadingStart;
         } else {
             $toProcess = $this->buffer;
             $this->buffer = '';
+            $this->scanOffset = 0;
         }
 
-        $pattern = \sprintf('/^(#{%d,%d})\s+(.+)$/m', $this->minHeadingLevel, $this->maxHeadingLevel);
         // @phpstan-ignore-next-line regexp.pattern (pattern is valid: constructor guarantees min <= max)
         $parts = preg_split($pattern, $toProcess, -1, \PREG_SPLIT_DELIM_CAPTURE | \PREG_SPLIT_NO_EMPTY);
 

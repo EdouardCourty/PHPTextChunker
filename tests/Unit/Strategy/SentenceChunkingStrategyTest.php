@@ -43,4 +43,18 @@ class SentenceChunkingStrategyTest extends TestCase
 
         $this->assertEquals(0, $chunks[0]->getPosition());
     }
+
+    public function testSentenceSplitAcrossStreamedBuffersStaysIntact(): void
+    {
+        $strategy = new SentenceChunkingStrategy();
+
+        $chunks = [
+            ...$strategy->process('First sen', false),
+            ...$strategy->process('tence. Second one.', false),
+            ...$strategy->process("\n", false),
+            ...$strategy->process('Third one.', true),
+        ];
+
+        $this->assertSame(['First sentence.', 'Second one.', 'Third one.'], array_map(static fn ($c) => $c->getText(), $chunks));
+    }
 }
