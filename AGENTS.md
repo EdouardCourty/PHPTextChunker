@@ -106,11 +106,16 @@ TextChunker (entry point)
 Tests are located in `tests/Unit/`. Each strategy and post-processor has its own test class.
 
 ```
-tests/Unit/
-├── TextChunkerTest.php
-├── Strategy/
-└── PostProcessor/
+tests/
+├── Unit/
+│   ├── TextChunkerTest.php
+│   ├── Strategy/
+│   └── PostProcessor/
+└── Functional/
+    └── InputModeConsistencyTest.php
 ```
+
+`tests/Functional/InputModeConsistencyTest.php` runs every streaming strategy on the same input as a string, a file and tiny reader fragments, and requires identical chunks. **A new strategy MUST be added to its data provider.**
 
 Run tests: `composer test`
 
@@ -133,6 +138,7 @@ Run tests: `composer test`
 2. Implement `process(string $data, bool $isEnd): \Generator` and `reset(): void`
 3. Add metadata key `strategy` to each yielded `Chunk`
 4. Add unit tests in `tests/Unit/Strategy/`
+5. Register the strategy in `tests/Functional/InputModeConsistencyTest.php` (same output for text, file and fragmented input)
 
 ### Adding a new Post-Processor
 

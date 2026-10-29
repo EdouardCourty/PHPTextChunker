@@ -31,8 +31,9 @@ final class RegexChunkingStrategy implements ChunkingStrategyInterface
     {
         $this->buffer .= $data;
 
+        // Empty parts are kept so that a buffer ending on a delimiter leaves nothing buffered; they are skipped when yielding
         $flags = $this->delimiterPosition === RegexDelimiterPosition::None
-            ? \PREG_SPLIT_NO_EMPTY
+            ? 0
             : \PREG_SPLIT_DELIM_CAPTURE;
 
         $parts = preg_split($this->pattern, $this->buffer, -1, $flags);

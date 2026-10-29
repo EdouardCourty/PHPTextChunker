@@ -3,6 +3,29 @@
 This file contains information about every addition, update and deletion in the `ecourty/text-chunker` library.  
 It is recommended to read this file before updating the library to a new version.
 
+## v1.3.1
+
+#### Fixes
+
+Streaming consistency: a strategy now returns the same chunks for `setText()` and `setFile()`, whatever the size of the reads.
+
+- `TextChunker`: a multibyte UTF-8 character cut by a read boundary is reassembled before reaching the strategy (previously it could corrupt a chunk, e.g. with `FixedSizeChunkingStrategy`)
+- `MarkdownChunkingStrategy`: a section spanning several reads is no longer split; the last section of each buffer is held back until the next heading or the end of the input (the continuation used to be emitted as a separate chunk with `heading_level` and `heading_text` set to `null`)
+- `SentenceChunkingStrategy`: a buffer holding a single, possibly incomplete sentence is no longer emitted early, and the whitespace after a sentence ending a buffer is no longer lost (it glued two sentences together)
+- `WordCountChunkingStrategy`: the buffer is advanced by the actual byte range of the consumed words instead of the length of the space-normalised text. Irregular whitespace (`\r\n`, double spaces) used to shift following chunks and cut words, also with `setText()`. A truncated last word is no longer emitted when the buffer ends mid-word, and the whitespace between two reads is no longer dropped
+- `RegexChunkingStrategy`: a buffer ending exactly on a delimiter no longer keeps the preceding part buffered (it was merged with the following text)
+
+#### Tests
+
+- Added a functional suite ([`tests/Functional/InputModeConsistencyTest.php`](./tests/Functional/InputModeConsistencyTest.php)) running the built-in strategies on the same input as a string, as a file and through readers yielding 1, 7, 251 and 1021-byte fragments, and asserting identical chunks (text, position, metadata)
+
+#### Maintenance
+
+- Removed unreachable end-of-input block in `SentenceChunkingStrategy` (flagged by PHPStan 2.3, no behavior change)
+- Bumped dev dependencies: `friendsofphp/php-cs-fixer` (^3.95.27), `phpstan/phpstan` (2.3.4), `phpunit/phpunit` (^13.4)
+
+---
+
 ## v1.3.0
 
 #### Requirements

@@ -31,26 +31,28 @@ final class WordCountChunkingStrategy implements ChunkingStrategyInterface
         $this->buffer .= $data;
 
         while (true) {
-            $words = preg_split('/\s+/u', mb_trim($this->buffer), -1, \PREG_SPLIT_NO_EMPTY);
+            $found = preg_match_all('/\S+/u', $this->buffer, $matches, \PREG_OFFSET_CAPTURE);
 
-            if ($words === false) {
+            if ($found === false) {
                 break;
             }
 
-            if (\count($words) < $this->wordCount) {
+            // Without the end of the input, the last word may be incomplete unless whitespace follows it
+            $available = $found;
+            if (!$isEnd && $found > 0 && preg_match('/\s$/u', $this->buffer) !== 1) {
+                --$available;
+            }
+
+            if ($available < $this->wordCount) {
                 break;
             }
 
-            $chunkWords = \array_slice($words, 0, $this->wordCount);
+            $chunkWords = array_column(\array_slice($matches[0], 0, $this->wordCount), 0);
             $chunkText = implode(' ', $chunkWords);
 
-            // Advance the buffer past the consumed words
-            $consumed = mb_strlen($chunkText);
-            $offset = mb_strpos($this->buffer, $chunkWords[0]);
-            if ($offset === false) {
-                break;
-            }
-            $this->buffer = mb_trim(mb_substr($this->buffer, $offset + $consumed));
+            // Advance the buffer past the byte range of the consumed words, whatever whitespace separated them
+            $lastWord = $matches[0][$this->wordCount - 1];
+            $this->buffer = mb_ltrim(substr($this->buffer, $lastWord[1] + \strlen($lastWord[0])));
 
             yield new Chunk(
                 text: $chunkText,

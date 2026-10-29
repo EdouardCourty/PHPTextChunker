@@ -81,4 +81,25 @@ class WordCountChunkingStrategyTest extends TestCase
         $this->assertCount(1, $chunks);
         $this->assertEquals('just a few words', $chunks[0]->getText());
     }
+
+    public function testIrregularWhitespaceDoesNotShiftFollowingChunks(): void
+    {
+        $strategy = new WordCountChunkingStrategy(2);
+
+        $chunks = iterator_to_array($strategy->process("un  deux\r\ntrois \n\n quatre cinq", true));
+
+        $this->assertSame(['un deux', 'trois quatre', 'cinq'], array_map(static fn ($c) => $c->getText(), $chunks));
+    }
+
+    public function testWordSplitAcrossStreamedBuffersIsNotEmittedEarly(): void
+    {
+        $strategy = new WordCountChunkingStrategy(2);
+
+        $chunks = [
+            ...$strategy->process('alpha be', false),
+            ...$strategy->process('ta gamma delta', true),
+        ];
+
+        $this->assertSame(['alpha beta', 'gamma delta'], array_map(static fn ($c) => $c->getText(), $chunks));
+    }
 }

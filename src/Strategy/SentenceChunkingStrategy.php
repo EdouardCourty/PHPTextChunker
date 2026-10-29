@@ -28,10 +28,12 @@ final class SentenceChunkingStrategy implements ChunkingStrategyInterface
             return;
         }
 
-        if (!$isEnd && \count($parts) > 1) {
-            $this->buffer = array_pop($parts) ?: '';
-        } else {
+        if ($isEnd || preg_match('/[.!?]\s+$/', $this->buffer) === 1) {
+            // Everything is complete: the input ended, or the last sentence is already followed by whitespace
             $this->buffer = '';
+        } else {
+            // The last part may be an incomplete sentence: keep it for the next call
+            $this->buffer = array_pop($parts) ?? '';
         }
 
         foreach ($parts as $sentence) {
@@ -51,20 +53,6 @@ final class SentenceChunkingStrategy implements ChunkingStrategyInterface
             );
 
             ++$this->position;
-        }
-
-        if ($isEnd && $this->buffer !== '') {
-            $trimmed = mb_trim($this->buffer);
-            if ($trimmed !== '') {
-                yield new Chunk(
-                    text: $trimmed,
-                    position: $this->position,
-                    metadata: [
-                        'strategy' => 'sentence',
-                        'length' => mb_strlen($trimmed),
-                    ],
-                );
-            }
         }
     }
 }
